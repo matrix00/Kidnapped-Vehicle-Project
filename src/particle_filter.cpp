@@ -95,7 +95,23 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 	// NOTE: this method will NOT be called by the grading code. But you will probably find it useful to 
 	//   implement this method and use it as a helper during the updateWeights phase.
 
-		cout<<"dassoc predicted=" << predicted.size() << " obs size"<< observations.size()<<endl;
+	cout<<"dassoc predicted=" << predicted.size() << " obs size"<< observations.size()<<endl;
+
+	
+	for (auto& pred: predicted){
+
+		cout<<"dassoc predicted=" << pred.x << " y "<< pred.y<<endl;
+		double min = numeric_limits<double>::max();
+		for (auto& ob:observations){
+
+			double distance = dist(pred.x, pred.y, ob.x, ob.y);
+			if (min > distance) {
+				min = distance;
+				ob.id = pred.id;
+			}
+			cout<<"dassoc obs=" << ob.x << " y "<< ob.y<<endl;
+		}
+	}
 	
 }
 
@@ -111,12 +127,65 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	//   and the following is a good resource for the actual equation to implement (look at equation 
 	//   3.33
 	//   http://planning.cs.uiuc.edu/node99.html
+
+
+	for (auto& p: particles) {
+
+		//predict the landmark with sensor range
+
+		vector<LandmarkObs> predictions;
+		for (auto& lmark:map_landmarks.landmark_list) {
+			double pldist = dist(p.x, p.y, lmark.x_f, lmark.y_f);
+			if (pldist < sensor_range)
+				predictions.push_back(LandmarkObs{lmark.id_i, lmark.x_f, lmark.y_f});
+		}
+
+
+		//The observations are given in the VEHICLE'S coordinate system. Your particles are located
+	        //   according to the MAP'S coordinate system. You will need to transform between the two systems.
+        	//   Keep in mind that this transformation requires both rotation AND translation (but no scaling).
+		vector<LandmarkObs> xformedObs;
+		for (auto& obs:observations) {
+			//http://planning.cs.uiuc.edu/node99.html
+			LandmarkObs xformedOb;
+			xformedOb.x = obs.x* cos(p.theta) - obs.y * sin(p.theta) + p.x;
+			xformedOb.y = obs.y* sin(p.theta) - obs.y * cos(p.theta) + p.y;
+		
+			xformedObs.push_back(xformedOb);
+		}
+		
+		// use data association to find closed one
+
+		dataAssociation(predictions, xformedObs);
+
+		p.weight=1.0;
+
+		for (auto& xObs: xformedObs) {
+			
+			for (auto& pred: predictions) {
+
+			//https://en.wikipedia.org/wiki/Multivariate_normal_distribution
+			//using multi variate gaussian distribution
+			// f(x,y) = 1/2 PI SigmaX SigmaY exp(- 1/2 (x - mu X)**2/ SigmaX**2 + (y - mu Y)**2/ SigmaY** 2)
+			double obsWeight = (1/(2*M_PI * std_landmark[0] * std_landmark[1])) * exp(-0.5*((pow(xObs.x-pred.x, 2)/pow(std_landmark[0], 2))+ (pow(xObs.y-pred.y, 2)/pow(std_landmark[1],2))));
+			p.weight *= obsWeight;
+			}
+		
+		}
+
+		weights.push_back(p.weight);
+	
+	}
+	
 }
+
 
 void ParticleFilter::resample() {
 	// TODO: Resample particles with replacement with probability proportional to their weight. 
 	// NOTE: You may find std::discrete_distribution helpful here.
 	//   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
+
+	//use discrete distribution for resampling
 
 }
 
