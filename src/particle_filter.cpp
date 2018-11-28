@@ -156,7 +156,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[], c
 			//http://planning.cs.uiuc.edu/node99.html
 			LandmarkObs xformedOb;
 			xformedOb.x = obs.x* cos(p.theta) - obs.y * sin(p.theta) + p.x;
-			xformedOb.y = obs.y* sin(p.theta) - obs.y * cos(p.theta) + p.y;
+			xformedOb.y = obs.x* sin(p.theta) + obs.y * cos(p.theta) + p.y;
 			xformedOb.id = obs.id;	
 			xformedObs.push_back(xformedOb);
 		}
